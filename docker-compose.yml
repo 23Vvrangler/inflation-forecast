@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  # Backend API Service (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: inflation-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=model/artifacts/model_v1.pkl
+      - METADATA_PATH=model/artifacts/metadata.json
+      - METRICS_PATH=model/artifacts/metrics.json
+    volumes:
+      # Mount artifacts so the model can be updated without rebuilding
+      - ./model/artifacts:/app/model/artifacts
+      - ./data:/app/data
+    networks:
+      - inflation-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # Frontend Service (Streamlit)
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: inflation-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - inflation-network
+    restart: unless-stopped
+
+  # Model Training Service (one-shot, optional)
+  # Usage: docker compose --profile training run --rm model-trainer
+  model-trainer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: inflation-trainer
+    command: python -m model.train
+    volumes:
+      - ./model/artifacts:/app/model/artifacts
+      - ./data:/app/data
+    networks:
+      - inflation-network
+    profiles:
+      - training
+
+networks:
+  inflation-network:
+    driver: bridge

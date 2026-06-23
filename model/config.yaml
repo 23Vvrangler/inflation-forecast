@@ -1,0 +1,102 @@
+# Model Configuration
+# Project: Scraping Inflation Data And Developing A Model With Data From CommonCrawl
+# Dataset: Multi-country inflation time series (World Bank API + NLP text features)
+# Task: Regression - Predict next-month inflation rate (t+1)
+
+# Countries included in the dataset
+countries:
+  - code: "PER"
+    name: "Peru"
+  - code: "ARG"
+    name: "Argentina"
+  - code: "BRA"
+    name: "Brazil"
+  - code: "CHL"
+    name: "Chile"
+  - code: "COL"
+    name: "Colombia"
+  - code: "MEX"
+    name: "Mexico"
+
+# Target variable
+target:
+  column: "inflation_rate_t_plus_1"
+  description: "Inflation rate for month t+1 (next month prediction)"
+
+# Feature columns (numeric + text-derived)
+features:
+  numeric:
+    - "inflation_lag_1"
+    - "inflation_lag_3"
+    - "inflation_lag_6"
+    - "inflation_lag_12"
+    - "rolling_mean_3"
+    - "rolling_mean_6"
+    - "rolling_mean_12"
+    - "rolling_std_6"
+    - "gdp_growth"
+    - "interest_rate"
+    - "month_sin"
+    - "month_cos"
+  text:
+    - "text_sentiment_score"
+    - "text_tfidf_mean"
+    - "text_vocabulary_richness"
+    - "text_keyword_inflation"
+    - "text_keyword_crisis"
+    - "text_keyword_growth"
+    - "text_keyword_interest"
+    - "text_keyword_unemployment"
+    - "text_keyword_gdp"
+    - "text_keyword_currency"
+    - "text_keyword_market"
+    - "text_article_count"
+
+# Preprocessing configuration
+preprocessing:
+  numeric:
+    imputer_strategy: "median"
+    scaler: "standard"  # standard, minmax, robust, none
+  text:
+    imputer_strategy: "constant"
+    imputer_fill_value: 0
+
+# Model configuration
+model:
+  algorithm: "xgboost"
+  random_state: 42
+  hyperparameters:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    objective: "reg:squarederror"
+
+# Temporal split configuration (NO random shuffle for time series)
+split:
+  method: "temporal"
+  test_months: 12  # Use last 12 months as test set
+  validation_months: 6  # Use 6 months before test for validation (optional)
+
+# Paths
+paths:
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  features_file: "data/processed/features.csv"
+  train_file: "data/splits/train.csv"
+  test_file: "data/splits/test.csv"
+  artifacts_dir: "model/artifacts"
+  model_file: "model/artifacts/model_v1.pkl"
+  metadata_file: "model/artifacts/metadata.json"
+  metrics_file: "model/artifacts/metrics.json"
+  predictions_plot: "model/artifacts/predictions_vs_actual.png"
+  residuals_plot: "model/artifacts/residuals.png"
+  feature_importance_plot: "model/artifacts/feature_importance.png"
+
+# Versioning
+versioning:
+  model_version: "v1.0.0"
+  experiment_name: "inflation_forecast_mvp"
